@@ -106,7 +106,7 @@ namespace Ecommerce.Application.Services.Cart
         {
             var cart = await _cartRepo.Query().Include(c => c.CartItems)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
-            if (cart == null) throw new InvalidOperationException("Cart not found");
+            if (cart == null) return false;
 
             var item = cart.CartItems.FirstOrDefault(ci => ci.ProductId == productId);
             if (item == null || item.Quantity >= MaxQuantity) return false;
@@ -120,7 +120,7 @@ namespace Ecommerce.Application.Services.Cart
         {
             var cart = await _cartRepo.Query().Include(c => c.CartItems)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
-            if (cart == null) throw new InvalidOperationException("Cart not found");
+            if (cart == null) return false;
 
             var item = cart.CartItems.FirstOrDefault(ci => ci.ProductId == productId);
             if (item == null) return false;

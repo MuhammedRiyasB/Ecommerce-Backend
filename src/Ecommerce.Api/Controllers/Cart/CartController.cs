@@ -2,6 +2,7 @@ using Ecommerce.Application.DTOs.Cart;
 using Ecommerce.Application.Interfaces.Cart;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Asp.Versioning;
 
@@ -16,42 +17,51 @@ namespace Ecommerce.Api.Controllers.Cart
         private readonly ICartService _cartService;
         public CartController(ICartService cartService) => _cartService = cartService;
 
-        private Guid GetUserId()
+        private bool TryGetUserId(out Guid userId)
         {
+            userId = Guid.Empty;
             var claim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("id");
-            if (claim == null || !Guid.TryParse(claim.Value, out var userId))
-                throw new UnauthorizedAccessException("User id not found in token");
-            return userId;
+            return claim != null && Guid.TryParse(claim.Value, out userId);
         }
 
         [HttpPost("add")]
         public async Task<IActionResult> AddToCart([FromBody] AddToCartRequestDto dto)
         {
+            if (!TryGetUserId(out var userId)) return Unauthorized(new { message = "User identity not found in token" });
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            return Ok(await _cartService.AddToCartAsync(GetUserId(), dto));
+            return Ok(await _cartService.AddToCartAsync(userId, dto));
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetCart() => Ok(await _cartService.GetUserCartAsync(GetUserId()));
+        public async Task<IActionResult> GetCart()
+        {
+            if (!TryGetUserId(out var userId)) return Unauthorized(new { message = "User identity not found in token" });
+            return Ok(await _cartService.GetUserCartAsync(userId));
+        }
 
         [HttpDelete("{productId:guid}")]
         public async Task<IActionResult> RemoveItem([FromRoute] Guid productId)
         {
-            var success = await _cartService.RemoveFromCartAsync(GetUserId(), productId);
+            if (!TryGetUserId(out var userId)) return Unauthorized(new { message = "User identity not found in token" });
+            var success = await _cartService.RemoveFromCartAsync(userId, productId);
             return success ? Ok(new { message = "Item removed" }) : NotFound(new { message = "Item not found in cart" });
         }
 
         [HttpPut("decrease/{productId:guid}")]
-        public async Task<IActionResult> DecreaseQuantity([FromRoute] Guid productId, [FromQuery] int delta = 1)
+        public async Task<IActionResult> DecreaseQuantity([FromRoute] Guid productId, [FromQuery][Range(1, int.MaxValue)] int delta = 1)
         {
-            var success = await _cartService.DecreaseQuantityAsync(GetUserId(), productId, delta);
+            if (!TryGetUserId(out var userId)) return Unauthorized(new { message = "User identity not found in token" });
+            if (!ModelState.IsValid) return BadRequest(new { message = "Delta must be a positive integer (>= 1)" });
+            var success = await _cartService.DecreaseQuantityAsync(userId, productId, delta);
             return success ? Ok(new { message = "Quantity decreased" }) : BadRequest(new { message = "Cannot decrease quantity" });
         }
 
         [HttpPut("increase/{productId:guid}")]
-        public async Task<IActionResult> IncreaseQuantity([FromRoute] Guid productId, [FromQuery] int delta = 1)
+        public async Task<IActionResult> IncreaseQuantity([FromRoute] Guid productId, [FromQuery][Range(1, int.MaxValue)] int delta = 1)
         {
-            var success = await _cartService.IncreaseQuantityAsync(GetUserId(), productId, delta);
+            if (!TryGetUserId(out var userId)) return Unauthorized(new { message = "User identity not found in token" });
+            if (!ModelState.IsValid) return BadRequest(new { message = "Delta must be a positive integer (>= 1)" });
+            var success = await _cartService.IncreaseQuantityAsync(userId, productId, delta);
             return success ? Ok(new { message = "Quantity increased" }) : BadRequest(new { message = "Cannot increase quantity" });
         }
     }

@@ -1,0 +1,48 @@
+using Ecommerce.Application.Interfaces.Cart;
+using Ecommerce.Application.Interfaces.Catalog;
+using Ecommerce.Application.Interfaces.Identity;
+using Ecommerce.Application.Interfaces.Orders;
+using Ecommerce.Application.Interfaces.Wishlist;
+using Ecommerce.Application.Services.Cart;
+using Ecommerce.Application.Services.Catalog;
+using Ecommerce.Application.Services.Identity;
+using Ecommerce.Application.Services.Orders;
+using Ecommerce.Application.Services.Wishlist;
+using Ecommerce.Application.Validators.Identity;
+using FluentValidation;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Ecommerce.Application
+{
+    /// <summary>
+    /// Registers all Application layer services, interfaces, and validators.
+    /// </summary>
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddApplication(this IServiceCollection services)
+        {
+            // Identity Services
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IAddressService, AddressService>();
+            services.AddScoped<IUserManagementService, UserManagementService>();
+
+            // Catalog Services
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IProductService, ProductService>();
+
+            // Cart Services
+            services.AddScoped<ICartService, CartService>();
+
+            // Order Services
+            services.AddScoped<IOrderService, OrderService>();
+
+            // Wishlist Services
+            services.AddScoped<IWishListService, WishListService>();
+
+            // FluentValidation — auto-discover all validators in this assembly
+            services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
+
+            return services;
+        }
+    }
+}
